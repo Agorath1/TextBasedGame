@@ -1,27 +1,29 @@
-# Robert Portell IT 140 SNHU
+# Robert P IT 140 SNHU
 # Intro to Python, final project
 
-rooms_list = [
-    ['Cockpit', ',,Corridor,', ''],
-    ['Corridor', 'Cockpit,Armory,Research Room,Supply Room',
-     'You see a narrow pathway with 4 doors and wires scars along the hardened steel walls.'],
-    ['Armory', ',,,Corridor',
-     'You enter the armory. You see a vast array of broken armor and blasters scattered across the room.What ever \n'
-     'happened to the ship must have triggered an explosion that damaged the armory.'],
-    ['Supply Room', ',Corridor,,',
-     'You enter the supply room. There are various supplies scattered across the room. You don\'t see much useful '
-     'items.'],
-    ['Quarters', ',Research Room,,',
-     'There is a single bunk in the corner of the room. There is not much in the way of decoration, just various \n'
-     'clothing scattered across the room.'],
-    ['Research Room', 'Corridor,Storage Bay,Engine Room,Quarters',
-     'You enter the research room. There are various monitors displayed across the room. A majority of them are \n'
-     'broken, while th rest seem to be displaying larges amount of data continuously.'],
-    ['Storage Bay', ',,,Research Room',
-     'You enter the storage bay. There isn\'t much here except a single human sized case. There might be something \n'
-     'useful inside.'],
-    ['Engine Room', 'Research Room,,,', '']
-]
+import textwrap
+
+rooms_list = (['Cockpit', ',,Corridor,', ''],
+              ['Corridor', 'Cockpit,Armory,Research Room,Supply Room',
+               'You see a narrow pathway with 4 doors and wires scars along the hardened steel walls.'],
+              ['Armory', ',,,Corridor',
+               'You enter the armory. You see a vast array of broken armor and blasters scattered across the room.What ever \n'
+               'happened to the ship must have triggered an explosion that damaged the armory.'],
+              ['Supply Room', ',Corridor,,',
+               'You enter the supply room. There are various supplies scattered across the room. You don\'t see much useful '
+               'items.'],
+              ['Quarters', ',Research Room,,',
+               'There is a single bunk in the corner of the room. There is not much in the way of decoration, just various \n'
+               'clothing scattered across the room.'],
+              ['Research Room', 'Corridor,Storage Bay,Engine Room,Quarters',
+               'You enter the research room. There are various monitors displayed across the room. A majority of them are \n'
+               'broken, while th rest seem to be displaying larges amount of data continuously.'],
+              ['Storage Bay', ',,,Research Room',
+               'You enter the storage bay. There isn\'t much here except a single human sized case. There might be something \n'
+               'useful inside.'],
+              ['Engine Room', 'Research Room,,,', ''])
+
+final_room = 'Cockpit'
 
 items_list = {
     'Supply Room': ('Can of Hydraulics', ''),
@@ -32,11 +34,19 @@ items_list = {
     'Engine Room': ('Energy Cell', '')
 }
 
-scenes_list = [
+scenes_list = (
     'You wake to a throbbing headache and no clue how you got here. You take your first look around the room you find '
     'yourself in.',
-    '----------------------------------------------------------------------------------------------------------------'
-]
+    '----------------------------------------------------------------------------------------------------------------',
+    f'You approach the door to the {final_room}, pulling out your \033[31mMulti-Tool\033[0m, you open the side panel '
+    f'of the door and refill the reserves from the \033[31mCan of Hydraulics\033[0m. Pulling out your '
+    f'\033[31mData Pad\033[0m, you initiate the door overrides. You find yourself in the {final_room}, ahead of you '
+    f'there is a man that turns to face you. He pulls a blaster out and fires. The energy blast from the blaster is '
+    f'absorbed by your \033[31mSpace Suit\033[0m. You pull out your own \033[31mBlaster\033[0m back. The man crumbles'
+    f' to the ground. Approaching the console, you pull out your \033[31mMulti-Tool\033[0m to open the console. You '
+    f'insert the \033[31mEnergy Cell\033[0m into the console, restoring temporary power. With power restored, you '
+    f'have captured your first vessel. You journey as a pirate has just begun...'
+)
 
 
 class Room:
@@ -78,18 +88,20 @@ class Player:
 
     # Will probably rewrite this later
     def move_rooms(self, direction):
-        # directions = dict(forward=((0 + self.face) % 4),
-        #                   right=((1 + self.face) % 4),
-        #                   backward=((2 + self.face) % 4),
-        #                   left=((3 + self.face) % 4))
 
         directions = map_directions(direction)[direction]
         if self.current_room.connected_rooms[directions] == '':
             print('There\'s a wall there, you can\'t go any farther')
             return ''
-        else:
-            self.face = directions
-            return self.current_room.connected_rooms[directions]
+        elif self.current_room.connected_rooms[directions] == final_room:
+            if len(self.inventory) == 6:
+                print('Final Boss')
+            else:
+                print('You can\'t enter there yet. You need all 6 items.')
+                self.face = directions
+                return ''
+        self.face = directions
+        return self.current_room.connected_rooms[directions]
 
     # Maybe add a check for if the item is not there?
     def get_item(self, item_name):
@@ -113,8 +125,11 @@ def map_directions(directions):
 
 
 def describe_directions(all_directions):
+    # Pulls the list of connections. Connections are established by the cardinal directions of north, east, south, west
+    # set to 0,1,2,3.
     room = player.current_room.connected_rooms
 
+    # determines if the direction is blank, so it establishes it the blanks as bulkheads.
     forward_room = (room[all_directions['forward']] if room[all_directions['forward']] else "bulkhead")
     left_room = (room[all_directions['left']] if room[all_directions['left']] else "bulkhead")
     right_room = (room[all_directions['right']] if room[all_directions['right']] else "bulkhead")
@@ -150,33 +165,39 @@ def initialize():
 
 # This will be the first thing displayed after each loop
 def print_menu():
-    print(player.current_room.get_description())
-    print(describe_directions(map_directions(player.face)))
+    print(player.current_room.get_description())  # Call room description
+    print(describe_directions(map_directions(player.face)))  # Call the 4 directions
     if player.inventory:
         inventory_names = [item.get_item_name() for item in player.inventory]
-        print('Inventory:', ', '.join(inventory_names))
-    print('List of commands: get #, forward, backward, left, right, quit.')
+        print('Inventory:', ', '.join(inventory_names))  # Lists items in inventory
+    print('List of commands: get #, forward, backward, left, right, quit.')  # Command list
 
 
-initialize()
-rooms = setup_Map()
-player = Player(rooms['Corridor'])  # Create the player
-# Game loop
-while True:
-    print_menu()
-    command = input("Enter Command:> ").lower()
-    print(scenes_list[1] + '\n\n')
-    command_length = len(command)
+if __name__ == '__main__':
+    initialize()
+    rooms = setup_Map()
+    player = Player(rooms['Corridor'])  # Create the player
+    # Game loop
+    while True:
+        print_menu()
+        command = input("Enter Command:> ").lower()
+        print(scenes_list[1] + '\n\n')
+        command_length = len(command)
 
-    if command in ['forward', 'backward', 'left', 'right']:
-        new_room = player.move_rooms(command)
-        if new_room != '':
-            player.current_room = rooms[new_room]
-    elif command.startswith("get") and len(command) > 6:
-        player.get_item(command[4:].strip())
-    # elif command == "inspect":
-    #     print_menu()
-    elif command == "quit":
-        break
-    else:
-        print('Invalid command')
+        if command in ['forward', 'backward', 'left', 'right']:
+            new_room = player.move_rooms(command)
+            if new_room != '':
+                player.current_room = rooms[new_room]
+        elif command.startswith("get") and len(command) > 6:
+            player.get_item(command[4:].strip())
+        # elif command == "inspect":
+        #     print_menu()
+        elif command == "quit":
+            print('The End')
+            break
+        else:
+            print('Invalid command')
+
+        if final_room == player.current_room.name:
+            print(textwrap.fill(scenes_list[2], 140))
+            break
