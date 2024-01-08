@@ -1,4 +1,8 @@
-# Robert Portell IT 140 SNHU
+# Ver.      Date          Author
+# 1.3   Jan 8, 2024    Robert Portell
+#
+# This is a text based game that will print out everything
+#
 # Intro to Python, final project
 
 import textwrap  # Imported so that I can wrap large texts so that  it doesn't disappear to the right.
@@ -6,42 +10,54 @@ import textwrap  # Imported so that I can wrap large texts so that  it doesn't d
 room_colors = '\033[32m'
 item_colors = '\033[34m'
 end_colors = '\033[0m'
-final_room = room_colors + 'Cockpit' + end_colors
+final_room = 'Cockpit'  # The last room that will be entered based off room name
+direction_text = ('forward', 'right', 'back', 'left')  # Rather than hard code certain words, I moved them up here.
 
-direction_text = ('forward', 'right', 'back', 'left')
-
-# Bunch of global variables
-rooms_list = (['Cockpit', ',,Corridor,', ''],
+# The lists below contain the data for rooms contained in the following order:
+# Room name, Connected Rooms, Room Description, Bool for the room's lock, the lock description, and the
+# item needed to unlock the door.
+# The room_lisr is a tuple containing lists for each room
+rooms_list = (['Cockpit', ',,Corridor,', '', False, '', ''],
               ['Corridor', 'Cockpit,Armory,Research Room,Supply Room',
                f'You see a narrow pathway with 4 doors and wires dangling from a broken terminal by the {final_room} '
-               f'door. Blast marks are scattered along the hardened steel walls.'],
+               f'door. Blast marks are scattered along the hardened steel walls.',
+               False, '', None],
               ['Armory', ',,,Corridor',
                'You enter the armory. You see a vast array of broken armor and blasters scattered across the room.\n'
-               'What ever happened to the ship must have triggered an explosion that damaged the armory.'],
+               'What ever happened to the ship must have triggered an explosion that damaged the armory.',
+               True, 'Looks like it needs a key code.', 'Key Codes'],
               ['Supply Room', ',Corridor,,',
                'You enter the supply room. There are various supplies scattered across the room. You don\'t see much '
-               'useful items.'],
+               'useful items.',
+               False, '', None],
               ['Quarters', ',Research Room,,',
                'There is a single bunk in the corner of the room. There is not much in the way of decoration, just \n'
-               'various clothing scattered across the room.'],
+               'various clothing scattered across the room.',
+               True, 'The door appears to be unpowered', 'Energy Cell'],
               ['Research Room', 'Corridor,Storage Bay,Engine Room,Quarters',
                'You enter the research room. There are various monitors displayed across the room. A majority of them\n'
-               ' are broken, while th rest seem to be displaying large amounts of data continuously.'],
+               ' are broken, while th rest seem to be displaying large amounts of data continuously.',
+               True, 'Looks like the reservoir for the hydraulics is empty.', 'Can of Hydraulics'],
               ['Storage Bay', ',,,Research Room',
                'You enter the storage bay. There isn\'t much here except a single human sized case. There might be '
-               'something \nuseful inside.'],
-              ['Engine Room', 'Research Room,,,', ''])
+               'something \nuseful inside.',
+               False, '', None],
+              ['Engine Room', 'Research Room,,,', '',
+               True, 'The door looks jammed, might need some tools', 'Multi-Tool'])
 
+# The items_list is a dictionary with the room name for the key. Each entry has the item name followed by the item
+# description
 items_list = {
-    'Supply Room': ('Can of Hydraulics', f'Looks like the hydraulics used in hydraulic doors to the {final_room}.'),
+    'Supply Room': ('Can of Hydraulics', f'A can of hydraulic oil used in most machines.'),
     'Armory': ('Blaster', 'It\'s good to have some level of ability to fight.'),
     'player_item': ('Data Pad', 'Useful for when you don\'t have a functioning control panel.'),
     'Research Room': ('Multi-Tool', 'A tool for every purpose.'),
     'Storage Bay': ('Space Suit', 'Might provide some level of protection.'),
-    'Engine Room': ('Energy Cell', 'Could be used to power up the electrical circuitry.'),
+    'Engine Room': ('Energy Cell', 'Could be used to power up some electrical circuitry.'),
     'Quarters': ('Key Codes', f'These look like the key codes to the {final_room}')
 }
 
+# This tuple just contains separate large text for events that happen. The order doesn't matter.
 scenes_list = (
     'You wake to a throbbing headache and no clue how you got here. You take your first look around the room you find '
     'yourself in. Looking around you appear to be on a space ship. Through a porthole monitor, you can see the '
@@ -60,34 +76,47 @@ scenes_list = (
 
 
 class Room:
-    def __init__(self, name, connected_rooms, description):
-        self.name = room_colors + name + end_colors  # Room name
+    def __init__(self, name, connected_rooms, description, lock, lock_description, lock_items):
+        self.name = name  # Room name
         self.connected_rooms = connected_rooms.split(',')  # Stores 4 directions around room with blanks being walls
         self.description = description  # Room description for entering a room
         self.item = None  # All items are empty initially since I need to create item objects first
+        self.lock = lock
+        self.lock_description = lock_description
+        self.lock_items = lock_items
 
-    def get_name(self):
-        return self.name
+    def get_color_room_name(self):
+        return room_colors + self.name + end_colors
 
     def set_item(self, item):
         self.item = item
 
     def get_description(self):
         # Since there is only one item, can just have the room describe the one item in the room class
-        room_description = '\n*' + self.get_name() + '*\n' + self.description
+        room_description = '\n*' + self.get_color_room_name() + '*\n' + self.description
         if self.item is not None:
-            item_check = 'a ' + self.item.get_item_name()
-            room_description += '\nThere is ' + item_check + ' here.'
+            item_check = 'a ' + self.item.get_color_item_name()
+            room_description += '\nThere is ' + item_check + ': ' + self.item.description
         return room_description
+
+    def check_lock(self):
+        return self.lock, self.lock_description
+
+    def unlock_lock(self, lock_item):
+        if lock_item in self.lock_items:
+            print('That seems to have worked')
+            self.lock = False
+        else:
+            print('Nothing seems to happen.')
 
 
 class Item:
     def __init__(self, name, description):
-        self.name = item_colors + name + end_colors
+        self.name = name
         self.description = description  # Use description for hints, maybe?
 
-    def get_item_name(self):
-        return self.name
+    def get_color_item_name(self):
+        return item_colors + self.name + end_colors
 
 
 class Player:
@@ -102,12 +131,29 @@ class Player:
     # Checks if there is anything there before moving.
     # If it is the final room, has a special function for that. Final room var is farther up.
     def move_rooms(self, direction):
+        directions = map_directions()[direction_text.index(direction)]  # Store direction
+        new_room_movement = self.current_room.connected_rooms[directions]  # Store new room location
 
-        directions = map_directions()[direction_text.index(direction)]
-        if self.current_room.connected_rooms[directions] == '':  # Checks for a wall
+        # Checks if there is no room connected in the direction
+        if new_room_movement == '':
             print('There\'s a wall there, you can\'t go any farther')
             return ''
-        elif self.current_room.connected_rooms[directions] == final_room:  # Checks for the final room
+
+        # Checks if the room is locked
+        elif rooms[new_room_movement].lock:
+            for item in self.inventory:  # Loops through players items
+                if rooms[new_room_movement].lock_items == item.name:  # Checks items name against lock requirements
+                    rooms[new_room_movement].lock = False  # Unlocks door for the future.
+                    print(f'{new_room_movement} unlocked')
+                    break
+            if rooms[new_room_movement].lock:  # Checks if it is still locked
+                print(f'The {new_room_movement} is locked.')
+                print(rooms[new_room_movement].lock_description)
+                self.face = directions
+                return ''
+
+        # Checks if the room being entered is the final room
+        elif self.current_room.connected_rooms[directions] == final_room:
             if len(self.inventory) == len(items_list):  # Checks if you have all items
                 print('Final Boss')
             else:
@@ -115,8 +161,10 @@ class Player:
                 print(f'You can\'t enter there yet. You\'ll need all {len(items_list)} items.')
                 self.face = directions
                 return ''
+
+        # Upon successfully entering room, faces the room from the direction entering
         self.face = directions
-        return self.current_room.connected_rooms[directions]  # Enters the room entered
+        return self.current_room.connected_rooms[directions]  # Stores new room as current room.
 
     # Gets item if it matches 3 char. If there is nothing, it will display that there is nothing to get
     # if there is an item it will match it to the item that was input into the command.
@@ -124,16 +172,15 @@ class Player:
         if self.current_room.item is None:
             print('There\'s nothing to get here.')
             return
-        if item_name in self.current_room.item.get_item_name().lower():
+        if item_name.lower() in self.current_room.item.name.lower():
             self.inventory.append(self.current_room.item)
-            print("You picked up a " + self.current_room.item.get_item_name())
+            print("You picked up a " + self.current_room.item.get_color_item_name())
             self.current_room.item = None
         else:
             print(f"There is no {item_name} to pick up.")
 
 
-# Rotates the numbers based on the direction the player is facing. Just a personal attempt on my part,
-# thought it came out well
+# Rotates the numbers based on the direction the player is facing.
 def map_directions():
     all_directions = [(0 + player.face) % 4,
                       (1 + player.face) % 4,
@@ -151,13 +198,10 @@ def describe_directions(new_direction_numbers):
 
     for counter, new_direction_counter in enumerate(new_direction_numbers):
         if connected_room_list[new_direction_counter]:
-            new_direction_words[counter] = connected_room_list[new_direction_counter]
+            new_direction_words[counter] = room_colors + connected_room_list[new_direction_counter] + end_colors
 
-    return (f'Ahead of you is a '
-            f'{room_colors + new_direction_words[0] + end_colors}, to your right is a '
-            f'{room_colors + new_direction_words[1] + end_colors}, behind you is a '
-            f'{room_colors + new_direction_words[2] + end_colors}, and to your left is a '
-            f'{room_colors + new_direction_words[3] + end_colors}.')
+    return ('Ahead of you is a {}, to your right is a {}, behind you is a {}, and to your left is a {}.'
+            .format(*new_direction_words))
 
 
 def setup_map():
@@ -169,7 +213,7 @@ def setup_map():
     # room = []
     room_setup = {}
     for i in rooms_list:
-        room = Room(i[0], i[1], i[2])  # Create object for room
+        room = Room(*i)  # Create object for room
         room_setup[i[0]] = room  # Store room in a dictionary for easy access by name
         if i[0] in items:  # Check if there's an item for this room
             room.set_item(items[i[0]])  # Add item to room
@@ -183,7 +227,7 @@ def print_menu():
 
     # Gets list of items and prints them
     if player.inventory:
-        inventory_names = [item.get_item_name() for item in player.inventory]
+        inventory_names = [item.get_color_item_name() for item in player.inventory]
         print('Current Inventory:', ', '.join(inventory_names))  # Lists items in inventory
     print(f'List of commands: get #, {', '.join(direction_text)}, quit.')  # Command list
 
