@@ -1,5 +1,5 @@
 # Ver.      Date          Author
-# 1.3   Jan 8, 2024    Robert Portell
+# 1.5   Jan 9, 2024    Robert P
 #
 # This is a text based game that will print out everything
 #
@@ -7,54 +7,109 @@
 
 import textwrap  # Imported so that I can wrap large texts so that  it doesn't disappear to the right.
 
+# Global variables
 room_colors = '\033[32m'
 item_colors = '\033[34m'
 end_colors = '\033[0m'
 final_room = 'Cockpit'  # The last room that will be entered based off room name
 direction_text = ('forward', 'right', 'back', 'left')  # Rather than hard code certain words, I moved them up here.
 
-# The lists below contain the data for rooms contained in the following order:
-# Room name, Connected Rooms, Room Description, Bool for the room's lock, the lock description, and the
-# item needed to unlock the door.
-# The room_lisr is a tuple containing lists for each room
-rooms_list = (['Cockpit', ',,Corridor,', '', False, '', ''],
-              ['Corridor', 'Cockpit,Armory,Research Room,Supply Room',
-               f'You are in a narrow pathway with 4 doors and wires dangling from a broken terminal by the '
-               f'{final_room} door. Blast marks are scattered along the hardened steel walls.',
-               False, '', None],
-              ['Armory', ',,,Corridor',
-               'You see a vast array of broken armor and blasters scattered across the room.\n'
-               'What ever happened to the ship must have triggered an explosion that damaged the armory.',
-               True, 'Looks like it needs a key code.', 'Key Codes'],
-              ['Supply Room', ',Corridor,,',
-               'There are various supplies scattered across the room. You don\'t see much '
-               'useful items.',
-               False, '', None],
-              ['Quarters', ',Research Room,,',
-               'There is a single bunk in the corner of the room. There is not much in the way of decoration, just \n'
-               'various clothing scattered across the room.',
-               True, 'The door appears to be unpowered', 'Energy Cell'],
-              ['Research Room', 'Corridor,Storage Bay,Engine Room,Quarters',
-               'There are various monitors displayed across the room. A majority of them\n'
-               ' are broken, while th rest seem to be displaying large amounts of data continuously.',
-               True, 'Looks like the reservoir for the door hydraulics is empty.', 'Can of Hydraulics'],
-              ['Storage Bay', ',,,Research Room',
-               'There isn\'t much here except a single human sized case. There might be '
-               'something \nuseful inside.',
-               False, '', None],
-              ['Engine Room', 'Research Room,,,', '',
-               True, 'The door looks jammed, might need some tools', 'Multi-Tool'])
+# The room_list is a dictionary
+rooms_dict = {
+    'Cockpit': {
+        'connections': ['', '', 'Corridor', ''],
+        'description': '',
+        'requires_key': True,
+        'lock_message': 'Looks like it needs a pass key to enter',
+        'key_type': 'Key Codes'
+    },
+    'Corridor': {
+        'connections': ['Cockpit', 'Armory', 'Research Room', 'Supply Room'],
+        'description': f'You are in a narrow pathway with 4 doors and wires dangling from a broken terminal by the '
+                       f'{final_room} door. Blast marks are scattered along the hardened steel walls.',
+        'requires_key': False,
+        'lock_message': '',
+        'key_type': None
+    },
+    'Armory': {
+        'connections': ['', '', '', 'Corridor'],
+        'description': 'You see a vast array of broken armor and blasters scattered across the room.What ever happened'
+                       ' to the ship must have triggered an explosion that damaged the armory.',
+        'requires_key': True,
+        'lock_message': 'Looks like it needs a key code.',
+        'key_type': 'Key Codes'
+    },
+    'Supply Room': {
+        'connections': ['', 'Corridor', '', ''],
+        'description': 'There are various supplies scattered across the room. You don\'t see much useful items.',
+        'requires_key': False,
+        'lock_message': '',
+        'key_type': None
+    },
+    'Quarters': {
+        'connections': ['', 'Research Room', '', ''],
+        'description': 'There is a single bunk in the corner of the room. There is not much in the way of decoration, '
+                       'just various clothing scattered across the room.',
+        'requires_key': True,
+        'lock_message': 'The door appears to be unpowered',
+        'key_type': 'Energy Cell'
+    },
+    'Research Room': {
+        'connections': ['Corridor', 'Storage Bay', 'Engine Room', 'Quarters'],
+        'description': 'There are various monitors displayed across the room. A majority of them are broken, while '
+                       'the rest seem to be displaying large amounts of data continuously.',
+        'requires_key': True,
+        'lock_message': 'Looks like the reservoir for the door hydraulics is empty.',
+        'key_type': 'Can of Hydraulics'
+    },
+    'Storage Bay': {
+        'connections': ['', '', '', 'Research Room'],
+        'description': 'There isn\'t much here except a single human sized case. There might be something useful '
+                       'inside.',
+        'requires_key': False,
+        'lock_message': '',
+        'key_type': None
+    },
+    'Engine Room': {
+        'connections': ['Research Room', '', '', ''],
+        'description': '',
+        'requires_key': True,
+        'lock_message': 'The door looks jammed, might need some tools',
+        'key_type': 'Multi-Tool'
+    }
+}
 
 # The items_list is a dictionary with the room name for the key. Each entry has the item name followed by the item
 # description
 items_list = {
-    'Supply Room': ('Can of Hydraulics', f'A can of hydraulic oil used in most machines.'),
-    'Armory': ('Blaster', 'It\'s good to have some level of ability to fight.'),
-    'player_item': ('Data Pad', 'Useful for when you don\'t have a functioning control panel.'),
-    'Research Room': ('Multi-Tool', 'A tool for every purpose.'),
-    'Storage Bay': ('Space Suit', 'Might provide some level of protection.'),
-    'Engine Room': ('Energy Cell', 'Could be used to power up some electrical circuitry.'),
-    'Quarters': ('Key Codes', f'These look like the key codes to the {final_room}')
+    'Supply Room': (
+        'Can of Hydraulics',
+        'A can of hydraulic oil used in most machines.'
+    ),
+    'Armory': (
+        'Blaster',
+        'It\'s good to have some level of ability to fight.'
+    ),
+    'player_item': (
+        'Data Pad',
+        'Useful for when you don\'t have a functioning control panel.'
+    ),
+    'Research Room': (
+        'Multi-Tool',
+        'A tool for every purpose.'
+    ),
+    'Storage Bay': (
+        'Space Suit',
+        'Might provide some level of protection.'
+    ),
+    'Engine Room': (
+        'Energy Cell',
+        'Could be used to power up some electrical circuitry.'
+    ),
+    'Quarters': (
+        'Key Codes',
+        f'These look like the key codes to the {final_room}'
+    )
 }
 
 # This tuple just contains separate large text for events that happen. The order doesn't matter.
@@ -78,7 +133,7 @@ scenes_list = (
 class Room:
     def __init__(self, name, connected_rooms, description, lock, lock_description, lock_items):
         self.name = name  # Room name
-        self.connected_rooms = connected_rooms.split(',')  # Stores 4 directions around room with blanks being walls
+        self.connected_rooms = connected_rooms  # Stores 4 directions around room with blanks being walls
         self.description = description  # Room description for entering a room
         self.item = None  # All items are empty initially since I need to create item objects first
         self.lock = lock
@@ -146,16 +201,6 @@ class Player:
                 self.face = directions
                 return ''
 
-        # Checks if the room being entered is the final room
-        elif self.current_room.connected_rooms[directions] == final_room:
-            if len(self.inventory) == len(items_list):  # Checks if you have all items
-                print('Final Boss')
-            else:
-                # Turns you to face the final room if you can't enter
-                print(f'You can\'t enter there yet. You\'ll need all {len(items_list)} items.')
-                self.face = directions
-                return ''
-
         # Upon successfully entering room, faces the room from the direction entering
         print(f'You go {direction} and enter {rooms[new_room_movement].get_color_room_name()}.')
         self.face = directions
@@ -200,27 +245,33 @@ def describe_directions(new_direction_numbers):
 
 
 def setup_map():
-    print(scenes_list[1])
-    print('\n*' + textwrap.fill(scenes_list[0], 120))
+    print(scenes_list[1])  # Prints a line break
+    print('\n*' + textwrap.fill(scenes_list[0], 120) + '\n')  # Prints the opening scene
+    help_menu()
     # Creates the items and puts them in a dictionary keyed to room names
     items = {i: Item(items_list[i][0], items_list[i][1]) for i in items_list}
 
-    # room = []
     room_setup = {}
-    for i in rooms_list:
-        room = Room(*i)  # Create object for room
-        room_setup[i[0]] = room  # Store room in a dictionary for easy access by name
-        if i[0] in items:  # Check if there's an item for this room
-            room.set_item(items[i[0]])  # Add item to room
+    for room_name, room_data in rooms_dict.items():
+        room = Room(room_name, room_data['connections'], room_data['description'],
+                    room_data['requires_key'], room_data['lock_message'], room_data['key_type'])
+
+        room_setup[room_name] = room  # Store room in a dictionary for easy access by name
+        if room_name in items:  # Check if there's an item for this room
+            room.set_item(items[room_name])  # Add item to room
     return room_setup
 
 
-# This will be the first thing displayed after each loop
-def print_menu():
-    print(player.current_room.get_description())  # Call room description
+def good_ending():
+    print('You win!')  # Place holder
 
-    # Gets list of items and prints them
-    print(f'List of commands: get #, {', '.join(direction_text)}, look around , inventory ,quit.\n')  # Command list
+
+def bad_ending():
+    print('You lose!')  # Place holder
+
+
+def help_menu():
+    print(f'List of commands: \nget #, {', '.join(direction_text)}, look around , inventory ,help, quit.\n')
 
 
 if __name__ == '__main__':
@@ -230,7 +281,7 @@ if __name__ == '__main__':
 
     # Main Game loop
     while True:
-        print_menu()  # Print UI
+        print(player.current_room.get_description())
         command = input("Enter Command:> ").lower().strip()
         print(scenes_list[1] + '\n')  # Prints a bunch of dashes to split dialogues
         command_length = len(command)
@@ -242,6 +293,8 @@ if __name__ == '__main__':
             new_room = player.move_rooms(command)
             if new_room != '':
                 player.current_room = rooms[new_room]
+        elif command == 'get #':
+            print('Please replace the # with the item name you wish to pick up.')
         elif command.startswith("get") and len(command) > 6:  # Item check and retrieval
             player.get_item(command[4:].strip())
         elif command in 'look around':
@@ -253,7 +306,9 @@ if __name__ == '__main__':
                 print('Current Inventory:', ', '.join(inventory_names))  # Lists items in inventory
             else:
                 print('You are not carrying anything')
-        elif command == "quit":  # Straight forward just ends the program
+        elif command == 'help':
+            help_menu()
+        elif command == 'quit':  # Straight forward just ends the program
             print('The End')
             break
         else:
@@ -261,5 +316,12 @@ if __name__ == '__main__':
 
         # Final Boss encounter
         if final_room == player.current_room.name or command == 'skip':
-            print(textwrap.fill(scenes_list[2], 120))
+            count = 0
+            for item in player.inventory:
+                if item.name == 'Space Suit' or item.name == 'Blaster':
+                    count += 1
+            if count == 2:
+                good_ending()
+            else:
+                bad_ending()
             break
