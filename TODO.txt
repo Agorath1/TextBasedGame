@@ -8,7 +8,7 @@ Create check for blaster or space suit for lose screen. Two different losses bas
 Check for appropriate naming conventions
 Redo entry screen
     Space Pirate Attack Adventure
-    Collect {len(item_list} to complete the adventure
+    Collect {len(item_list)} to complete the adventure
     List of commands
 
 
