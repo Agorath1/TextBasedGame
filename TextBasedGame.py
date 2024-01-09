@@ -19,15 +19,15 @@ direction_text = ('forward', 'right', 'back', 'left')  # Rather than hard code c
 # The room_lisr is a tuple containing lists for each room
 rooms_list = (['Cockpit', ',,Corridor,', '', False, '', ''],
               ['Corridor', 'Cockpit,Armory,Research Room,Supply Room',
-               f'You see a narrow pathway with 4 doors and wires dangling from a broken terminal by the {final_room} '
-               f'door. Blast marks are scattered along the hardened steel walls.',
+               f'You are in a narrow pathway with 4 doors and wires dangling from a broken terminal by the '
+               f'{final_room} door. Blast marks are scattered along the hardened steel walls.',
                False, '', None],
               ['Armory', ',,,Corridor',
-               'You enter the armory. You see a vast array of broken armor and blasters scattered across the room.\n'
+               'You see a vast array of broken armor and blasters scattered across the room.\n'
                'What ever happened to the ship must have triggered an explosion that damaged the armory.',
                True, 'Looks like it needs a key code.', 'Key Codes'],
               ['Supply Room', ',Corridor,,',
-               'You enter the supply room. There are various supplies scattered across the room. You don\'t see much '
+               'There are various supplies scattered across the room. You don\'t see much '
                'useful items.',
                False, '', None],
               ['Quarters', ',Research Room,,',
@@ -35,11 +35,11 @@ rooms_list = (['Cockpit', ',,Corridor,', '', False, '', ''],
                'various clothing scattered across the room.',
                True, 'The door appears to be unpowered', 'Energy Cell'],
               ['Research Room', 'Corridor,Storage Bay,Engine Room,Quarters',
-               'You enter the research room. There are various monitors displayed across the room. A majority of them\n'
+               'There are various monitors displayed across the room. A majority of them\n'
                ' are broken, while th rest seem to be displaying large amounts of data continuously.',
-               True, 'Looks like the reservoir for the hydraulics is empty.', 'Can of Hydraulics'],
+               True, 'Looks like the reservoir for the door hydraulics is empty.', 'Can of Hydraulics'],
               ['Storage Bay', ',,,Research Room',
-               'You enter the storage bay. There isn\'t much here except a single human sized case. There might be '
+               'There isn\'t much here except a single human sized case. There might be '
                'something \nuseful inside.',
                False, '', None],
               ['Engine Room', 'Research Room,,,', '',
@@ -94,20 +94,14 @@ class Room:
     def get_description(self):
         # Since there is only one item, can just have the room describe the one item in the room class
         room_description = '\n*' + self.get_color_room_name() + '*\n' + self.description
-        if self.item is not None:
-            item_check = 'a ' + self.item.get_color_item_name()
-            room_description += '\nThere is ' + item_check + ': ' + self.item.description
         return room_description
 
-    def check_lock(self):
-        return self.lock, self.lock_description
-
-    def unlock_lock(self, lock_item):
-        if lock_item in self.lock_items:
-            print('That seems to have worked')
-            self.lock = False
+    def check_item(self):
+        if self.item is not None:
+            item_check = 'a ' + self.item.get_color_item_name() + ': ' + self.item.description
         else:
-            print('Nothing seems to happen.')
+            item_check = 'no item.'
+        return '\nThere is ' + item_check
 
 
 class Item:
@@ -163,6 +157,7 @@ class Player:
                 return ''
 
         # Upon successfully entering room, faces the room from the direction entering
+        print(f'You go {direction} and enter {rooms[new_room_movement].get_color_room_name()}.')
         self.face = directions
         return self.current_room.connected_rooms[directions]  # Stores new room as current room.
 
@@ -223,13 +218,9 @@ def setup_map():
 # This will be the first thing displayed after each loop
 def print_menu():
     print(player.current_room.get_description())  # Call room description
-    print(describe_directions(map_directions()))  # Call the 4 directions
 
     # Gets list of items and prints them
-    if player.inventory:
-        inventory_names = [item.get_color_item_name() for item in player.inventory]
-        print('Current Inventory:', ', '.join(inventory_names))  # Lists items in inventory
-    print(f'List of commands: get #, {', '.join(direction_text)}, quit.')  # Command list
+    print(f'List of commands: get #, {', '.join(direction_text)}, look around , inventory ,quit.\n')  # Command list
 
 
 if __name__ == '__main__':
@@ -240,9 +231,12 @@ if __name__ == '__main__':
     # Main Game loop
     while True:
         print_menu()  # Print UI
-        command = input("Enter Command:> ").lower()
+        command = input("Enter Command:> ").lower().strip()
         print(scenes_list[1] + '\n')  # Prints a bunch of dashes to split dialogues
         command_length = len(command)
+
+        if len(command) < 3:
+            continue
 
         if command in direction_text:  # Player movement
             new_room = player.move_rooms(command)
@@ -250,8 +244,15 @@ if __name__ == '__main__':
                 player.current_room = rooms[new_room]
         elif command.startswith("get") and len(command) > 6:  # Item check and retrieval
             player.get_item(command[4:].strip())
-        # elif command == "inspect":  # I was going to have an inspect for item descriptions, I make bring this back
-        #     print_menu()
+        elif command in 'look around':
+            print(describe_directions(map_directions()))  # Call the 4 directions
+            print(player.current_room.check_item())
+        elif command in 'inventory':
+            if player.inventory:
+                inventory_names = [item.get_color_item_name() for item in player.inventory]
+                print('Current Inventory:', ', '.join(inventory_names))  # Lists items in inventory
+            else:
+                print('You are not carrying anything')
         elif command == "quit":  # Straight forward just ends the program
             print('The End')
             break
