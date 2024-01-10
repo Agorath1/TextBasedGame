@@ -1,17 +1,18 @@
 # Ver.      Date          Author
-# 1.5   Jan 9, 2024    Robert P
+# 1.6   Jan 9, 2024    Robert P
 #
 # This is a text based game that will print out everything
 #
 # Intro to Python, final project
 
-import textwrap  # Imported so that I can wrap large texts so that  it doesn't disappear to the right.
+import time
 
 # Global variables
 room_colors = '\033[32m'
 item_colors = '\033[34m'
 end_colors = '\033[0m'
 final_room = 'Cockpit'  # The last room that will be entered based off room name
+start_room = 'Corridor'
 direction_text = ('forward', 'right', 'back', 'left')  # Rather than hard code certain words, I moved them up here.
 
 # The room_list is a dictionary
@@ -41,7 +42,8 @@ rooms_dict = {
     },
     'Supply Room': {
         'connections': ['', 'Corridor', '', ''],
-        'description': 'There are various supplies scattered across the room. You don\'t see much useful items.',
+        'description': 'There are various supplies scattered across the room. There aren\'t many items that are still '
+                       'useful.',
         'requires_key': False,
         'lock_message': '',
         'key_type': None
@@ -55,7 +57,7 @@ rooms_dict = {
         'key_type': 'Energy Cell'
     },
     'Research Room': {
-        'connections': ['Corridor', 'Storage Bay', 'Engine Room', 'Quarters'],
+        'connections': ['Corridor', 'Storage Bay', 'Reactor Room', 'Quarters'],
         'description': 'There are various monitors displayed across the room. A majority of them are broken, while '
                        'the rest seem to be displaying large amounts of data continuously.',
         'requires_key': True,
@@ -70,9 +72,10 @@ rooms_dict = {
         'lock_message': '',
         'key_type': None
     },
-    'Engine Room': {
+    'Reactor Room': {
         'connections': ['Research Room', '', '', ''],
-        'description': '',
+        'description': 'There is what appears to the reactor, however you are no engineer so you pay no further '
+                       'attention.',
         'requires_key': True,
         'lock_message': 'The door looks jammed, might need some tools',
         'key_type': 'Multi-Tool'
@@ -102,7 +105,7 @@ items_list = {
         'Space Suit',
         'Might provide some level of protection.'
     ),
-    'Engine Room': (
+    'Reactor Room': (
         'Energy Cell',
         'Could be used to power up some electrical circuitry.'
     ),
@@ -113,21 +116,23 @@ items_list = {
 }
 
 # This tuple just contains separate large text for events that happen. The order doesn't matter.
-scenes_list = (
-    'You wake to a throbbing headache and no clue how you got here. You take your first look around the room you find '
-    'yourself in. Looking around you appear to be on a space ship. Through a porthole monitor, you can see the '
-    'hyperdrive stream. You need to find out how to get out of here.',
-    '----------------------------------------------------------------------------------------------------------------',
-    f'You approach the door to the {final_room}, pulling out your {item_colors}Multi-Tool{end_colors}, you open the '
-    f'side panel of the door and refill the reserves from the {item_colors}Can of Hydraulics{end_colors}. Pulling out '
-    f'your {item_colors}Data Pad{end_colors}, you initiate the door overrides with the {item_colors}Key Codes'
-    f'{end_colors}. You find yourself in the {final_room}, ahead of you there is a man that turns to face you. He pulls'
-    f' a blaster out and fires. The energy blast from the blaster is absorbed by your {item_colors}Space Suit'
-    f'{end_colors}. You pull out your own {item_colors}Blaster{end_colors} and fire back. The man crumbles to the '
-    f'ground. Approaching the console, you pull out your {item_colors}Multi-Tool{end_colors} to open the console. You '
-    f'insert the {item_colors}Energy Cell{end_colors} into the console, restoring temporary power. With power restored'
-    f', you have captured your first vessel. You journey as a pirate has just begun...'
-)
+scenes_list: list[str] = [
+    'Space Pirate Attack.\n',
+    f'Collect all {len(items_list)} items to complete the adventure.\n\n',
+    '\"You wake to a throbbing headache and no clue how you got here. You take your first look around the room you '
+    'find yourself in. Looking around you appear to be on a space ship. Through a porthole monitor, you can see the '
+    'hyperdrive stream. You need to find out how to get out of here.\"',
+    '\\-------------------------------------------------------------------------------------------------------------\\',
+    f'You enter the {final_room}. Across from you is a man tapping away at a console while alarms are ringing in the '
+    f'background. As you approach, the man suddenly turns and fires at you. You attempt to dodge but you are still '
+    f'hit. ',
+    f'The damage is absorbed by the {item_colors}Space Suit{end_colors}. With a grunt, you reach down to '
+    f'your {item_colors}Blaster{end_colors}. ',
+    f'Pulling out your blaster, you fire back causing the man to crumble to the ground. You successfully captured you '
+    f'first ship! Your life as a space pirate has just begun.',
+    f'You crumble to the ground as the blast hits your unprotected body. ',
+    f'You find nothing, the man fires again. The {item_colors}Space Suit{end_colors} fails to absorb the damage. '
+]
 
 
 class Room:
@@ -169,8 +174,8 @@ class Item:
 
 
 class Player:
-    def __init__(self, start_room):
-        self.current_room = start_room  # Variable start room so that I can change it easily
+    def __init__(self, start_room_class):
+        self.current_room = start_room_class  # Variable start room so that I can change it easily
         self.inventory = []  # Will just randomly store items based off of FIFO
         self.face = 2  # Face 'South', opposite of the final room.
         if 'player_item' in items_list:  # Checks if the player starts with an item and then adds it
@@ -185,24 +190,26 @@ class Player:
 
         # Checks if there is no room connected in the direction
         if new_room_movement == '':
-            print('There\'s a wall there, you can\'t go any farther')
+            print_slower('There\'s a wall there, you can\'t go any farther')
             return ''
 
         # Checks if the room is locked
-        elif rooms[new_room_movement].lock:
+        elif class_room_list[new_room_movement].lock:
             for item in self.inventory:  # Loops through players items
-                if rooms[new_room_movement].lock_items == item.name:  # Checks items name against lock requirements
-                    rooms[new_room_movement].lock = False  # Unlocks door for the future.
-                    print(f'{new_room_movement} unlocked')
+
+                # Checks items name against lock requirements
+                if class_room_list[new_room_movement].lock_items == item.name:
+                    class_room_list[new_room_movement].lock = False  # Unlocks door for the future.
+                    print_slower(f'{new_room_movement} unlocked')
                     break
-            if rooms[new_room_movement].lock:  # Checks if it is still locked
-                print(f'The {new_room_movement} is locked.')
-                print(rooms[new_room_movement].lock_description)
+            if class_room_list[new_room_movement].lock:  # Checks if it is still locked
+                print_slower(f'The {new_room_movement} is locked.')
+                print_slower(class_room_list[new_room_movement].lock_description)
                 self.face = directions
                 return ''
 
         # Upon successfully entering room, faces the room from the direction entering
-        print(f'You go {direction} and enter {rooms[new_room_movement].get_color_room_name()}.')
+        print_slower(f'You go {direction} and enter {class_room_list[new_room_movement].get_color_room_name()}.')
         self.face = directions
         return self.current_room.connected_rooms[directions]  # Stores new room as current room.
 
@@ -217,7 +224,7 @@ class Player:
             print("You picked up a " + self.current_room.item.get_color_item_name())
             self.current_room.item = None
         else:
-            print(f"There is no {item_name} to pick up.")
+            print(f"There is no {item_name[:30]} to pick up.")
 
 
 # Rotates the numbers based on the direction the player is facing.
@@ -245,8 +252,10 @@ def describe_directions(new_direction_numbers):
 
 
 def setup_map():
-    print(scenes_list[1])  # Prints a line break
-    print('\n*' + textwrap.fill(scenes_list[0], 120) + '\n')  # Prints the opening scene
+    print(scenes_list[3])  # Prints a line break
+    print_slower(scenes_list[0])
+    print_slower(scenes_list[1])
+    print_slower(scenes_list[2] + '\n')  # Prints the opening scene
     help_menu()
     # Creates the items and puts them in a dictionary keyed to room names
     items = {i: Item(items_list[i][0], items_list[i][1]) for i in items_list}
@@ -262,66 +271,101 @@ def setup_map():
     return room_setup
 
 
+# Based on map setup, you have to get all items but the blaster and space suit. So I just lock it with the last item
 def good_ending():
-    print('You win!')  # Place holder
+    print_slower(scenes_list[4] + scenes_list[5] + scenes_list[6])
+    print('\n You win! Thanks for playing my game developed for SNHU Introduction to Scripting. Hope you enjoyed it.')
 
 
-def bad_ending():
-    print('You lose!')  # Place holder
+def bad_ending(space_suit_value):  # Assumes that either blaster or space suit is false, so I only need one of those.
+    if space_suit_value is False:
+        print_slower(scenes_list[4] + scenes_list[7])
+    else:
+        print_slower(scenes_list[4] + scenes_list[5] + scenes_list[8])
+    print('\nGAME OVER. Try to collect all items next time.')
 
 
 def help_menu():
     print(f'List of commands: \nget #, {', '.join(direction_text)}, look around , inventory ,help, quit.\n')
 
 
-if __name__ == '__main__':
+def print_slower(text_output):
+    letter_counter = 0
+    letter_number = 0
+    while letter_number < len(text_output):
+        if (letter_counter >= 120 and text_output[letter_number] == " ") or text_output[letter_number] == '\n':
+            print('')
+            letter_counter = 0
+            letter_number += 1
+        elif text_output[letter_number] == '\033':
+            # Handle ANSI escape code
+            start = letter_number
+            letter_number += 1
+            while letter_number < len(text_output) and text_output[letter_number] not in ('m', 'H', 'J', 'K'):
+                letter_number += 1
+            # Print the entire escape code without delay
+            print(text_output[start:letter_number + 1], end='', flush=True)
+            letter_number += 1  # Skip the last character of the escape code
+        else:
+            print(text_output[letter_number], end="", flush=True)
+            letter_number += 1
+            letter_counter += 1
+            time.sleep(0.00)
+    print()
 
-    rooms = setup_map()  # Set up rooms and items
-    player = Player(rooms['Corridor'])  # Create the player
 
-    # Main Game loop
+def main_loop():
     while True:
-        print(player.current_room.get_description())
-        command = input("Enter Command:> ").lower().strip()
-        print(scenes_list[1] + '\n')  # Prints a bunch of dashes to split dialogues
-        command_length = len(command)
+        print_slower(player.current_room.get_description())
+        player_command = input("\nEnter Command:> ").lower().strip()
+        print(scenes_list[3] + '\n')  # Prints a bunch of dashes to split dialogues
 
-        if len(command) < 3:
+        if len(player_command) < 3:
             continue
 
-        if command in direction_text:  # Player movement
-            new_room = player.move_rooms(command)
+        if player_command in direction_text:  # Player movement
+            new_room = player.move_rooms(player_command)
             if new_room != '':
-                player.current_room = rooms[new_room]
-        elif command == 'get #':
+                player.current_room = class_room_list[new_room]
+        elif player_command == 'get #':
             print('Please replace the # with the item name you wish to pick up.')
-        elif command.startswith("get") and len(command) > 6:  # Item check and retrieval
-            player.get_item(command[4:].strip())
-        elif command in 'look around':
-            print(describe_directions(map_directions()))  # Call the 4 directions
-            print(player.current_room.check_item())
-        elif command in 'inventory':
+        elif player_command.startswith("get") and len(player_command) > 6:  # Item check and retrieval
+            player.get_item(player_command[4:].strip())
+        elif player_command in 'look around':
+            print_slower(describe_directions(map_directions()))  # Call the 4 directions
+            print_slower(player.current_room.check_item())
+        elif player_command in 'inventory':
             if player.inventory:
                 inventory_names = [item.get_color_item_name() for item in player.inventory]
                 print('Current Inventory:', ', '.join(inventory_names))  # Lists items in inventory
             else:
                 print('You are not carrying anything')
-        elif command == 'help':
+        elif player_command == 'help':
             help_menu()
-        elif command == 'quit':  # Straight forward just ends the program
+        elif player_command == 'quit':  # Straight forward just ends the program
             print('The End')
             break
         else:
             print('Invalid command')  # Only displayed if other commands don't find anything.
 
         # Final Boss encounter
-        if final_room == player.current_room.name or command == 'skip':
-            count = 0
+        if final_room == player.current_room.name or player_command == 'skip':
+            space_suit = False
+            blaster = False
             for item in player.inventory:
                 if item.name == 'Space Suit' or item.name == 'Blaster':
-                    count += 1
-            if count == 2:
+                    space_suit = True
+                if item.name == 'Blaster':
+                    blaster = True
+            if space_suit and blaster:
                 good_ending()
             else:
-                bad_ending()
+                bad_ending(space_suit)
             break
+
+
+if __name__ == '__main__':
+    class_room_list = setup_map()  # Set up rooms and items
+    player = Player(class_room_list[start_room])  # Create the player
+    main_loop()
+    # Main Game loop

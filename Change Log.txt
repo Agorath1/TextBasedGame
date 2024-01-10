@@ -1,0 +1,9 @@
+Changes for 1.6
+New ending text
+Ending screens check for blaster and space suit
+New opening with game title and objective
+Limited the length of wrong item pick up just in case
+Add slow text and self-made text wrap
+turned start room into a variable
+Changed engine room to reactor room
+Gave reactor room a description
