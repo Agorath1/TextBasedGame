@@ -1,7 +1,8 @@
 # Ver.      Date          Author
-# 1.6   Jan 9, 2024    Robert P
+# 1.6   Jan 9, 2024    Robertp3001
 #
-# This is a text based game that will print out everything
+# This is a text based game that will print out everything. There are 8 rooms with 6 items scattered throughout the
+# level. Items can unlock doors to the final boss.
 #
 # Intro to Python, final project
 
@@ -11,13 +12,13 @@ import time
 room_colors = '\033[32m'
 item_colors = '\033[34m'
 end_colors = '\033[0m'
-final_room = 'Cockpit'  # The last room that will be entered based off room name
+final_room = 'Bridge'  # The last room that will be entered based off room name
 start_room = 'Corridor'
 direction_text = ('forward', 'right', 'back', 'left')  # Rather than hard code certain words, I moved them up here.
 
 # The room_list is a dictionary
 rooms_dict = {
-    'Cockpit': {
+    'Bridge': {
         'connections': ['', '', 'Corridor', ''],
         'description': '',
         'requires_key': True,
@@ -25,7 +26,7 @@ rooms_dict = {
         'key_type': 'Key Codes'
     },
     'Corridor': {
-        'connections': ['Cockpit', 'Armory', 'Research Room', 'Supply Room'],
+        'connections': ['Bridge', 'Armory', 'Research Room', 'Supply Room'],
         'description': f'You are in a narrow pathway with 4 doors and wires dangling from a broken terminal by the '
                        f'{final_room} door. Blast marks are scattered along the hardened steel walls.',
         'requires_key': False,
@@ -82,9 +83,9 @@ rooms_dict = {
     }
 }
 
-# The items_list is a dictionary with the room name for the key. Each entry has the item name followed by the item
+# The items_dict is a dictionary with the room name for the key. Each entry has the item name followed by the item
 # description
-items_list = {
+items_dict = {
     'Supply Room': (
         'Can of Hydraulics',
         'A can of hydraulic oil used in most machines.'
@@ -115,10 +116,10 @@ items_list = {
     )
 }
 
-# This tuple just contains separate large text for events that happen. The order doesn't matter.
+# This list just contains separate large text for events that happen. The order doesn't matter.
 scenes_list: list[str] = [
     'Space Pirate Attack.\n',
-    f'Collect all {len(items_list)} items to complete the adventure.\n\n',
+    f'Collect all {len(items_dict)} items to complete the adventure.\n\n',
     '\"You wake to a throbbing headache and no clue how you got here. You take your first look around the room you '
     'find yourself in. Looking around you appear to be on a space ship. Through a porthole monitor, you can see the '
     'hyperdrive stream. You need to find out how to get out of here.\"',
@@ -135,6 +136,7 @@ scenes_list: list[str] = [
 ]
 
 
+# Class for room that holds information for the rooms.
 class Room:
     def __init__(self, name, connected_rooms, description, lock, lock_description, lock_items):
         self.name = name  # Room name
@@ -145,17 +147,21 @@ class Room:
         self.lock_description = lock_description
         self.lock_items = lock_items
 
+    # This colors the name on PyCharm console.
     def get_color_room_name(self):
         return room_colors + self.name + end_colors
 
+    # Function to set an item into room class
     def set_item(self, item):
         self.item = item
 
+    # Gets the room description colored
     def get_description(self):
         # Since there is only one item, can just have the room describe the one item in the room class
         room_description = '\n*' + self.get_color_room_name() + '*\n' + self.description
         return room_description
 
+    # This checks for item in the room.
     def check_item(self):
         if self.item is not None:
             item_check = 'a ' + self.item.get_color_item_name() + ': ' + self.item.description
@@ -164,22 +170,25 @@ class Room:
         return '\nThere is ' + item_check
 
 
+# Class for all items to be built off of.
 class Item:
     def __init__(self, name, description):
         self.name = name
         self.description = description  # Use description for hints, maybe?
 
+    # Colors the name of the item.
     def get_color_item_name(self):
         return item_colors + self.name + end_colors
 
 
+# Class for the player that hold on information on player.
 class Player:
     def __init__(self, start_room_class):
         self.current_room = start_room_class  # Variable start room so that I can change it easily
         self.inventory = []  # Will just randomly store items based off of FIFO
         self.face = 2  # Face 'South', opposite of the final room.
-        if 'player_item' in items_list:  # Checks if the player starts with an item and then adds it
-            self.inventory.append(Item(items_list['player_item'][0], items_list['player_item'][1]))
+        if 'player_item' in items_dict:  # Checks if the player starts with an item and then adds it
+            self.inventory.append(Item(items_dict['player_item'][0], items_dict['player_item'][1]))
 
     # Rotates the list of connections based off of the direction the player is facing.
     # Checks if there is anything there before moving.
@@ -229,16 +238,14 @@ class Player:
 
 # Rotates the numbers based on the direction the player is facing.
 def map_directions():
-    all_directions = [(0 + player.face) % 4,
-                      (1 + player.face) % 4,
-                      (2 + player.face) % 4,
-                      (3 + player.face) % 4]
+    all_directions = []
+    for i in range(0, 4):
+        all_directions.append((i + player.face) % 4)
     return all_directions
 
 
+# Gets the description of the rooms currently in.
 def describe_directions(new_direction_numbers):
-    # I spent too much time on this section. However, I wanted the remove the direction text from here and make
-    # them into a global variable that I could change at will.
     connected_room_list = player.current_room.connected_rooms
     dead_end = 'bulkhead'
     new_direction_words = [dead_end, dead_end, dead_end, dead_end]
@@ -251,6 +258,7 @@ def describe_directions(new_direction_numbers):
             .format(*new_direction_words))
 
 
+# Set up the map at the start of the game.
 def setup_map():
     print(scenes_list[3])  # Prints a line break
     print_slower(scenes_list[0])
@@ -258,8 +266,9 @@ def setup_map():
     print_slower(scenes_list[2] + '\n')  # Prints the opening scene
     help_menu()
     # Creates the items and puts them in a dictionary keyed to room names
-    items = {i: Item(items_list[i][0], items_list[i][1]) for i in items_list}
+    items = {i: Item(items_dict[i][0], items_dict[i][1]) for i in items_dict}
 
+    # Create room class
     room_setup = {}
     for room_name, room_data in rooms_dict.items():
         room = Room(room_name, room_data['connections'], room_data['description'],
@@ -272,6 +281,7 @@ def setup_map():
 
 
 # Based on map setup, you have to get all items but the blaster and space suit. So I just lock it with the last item
+# that can be obtained.
 def good_ending():
     print_slower(scenes_list[4] + scenes_list[5] + scenes_list[6])
     print('\n You win! Thanks for playing my game developed for SNHU Introduction to Scripting. Hope you enjoyed it.')
@@ -285,10 +295,12 @@ def bad_ending(space_suit_value):  # Assumes that either blaster or space suit i
     print('\nGAME OVER. Try to collect all items next time.')
 
 
+# Print list of commands
 def help_menu():
     print(f'List of commands: \nget #, {', '.join(direction_text)}, look around , inventory ,help, quit.\n')
 
 
+# Slows down the speed of type messages in console.
 def print_slower(text_output):
     letter_counter = 0
     letter_number = 0
@@ -297,7 +309,7 @@ def print_slower(text_output):
             print('')
             letter_counter = 0
             letter_number += 1
-        elif text_output[letter_number] == '\033':
+        elif text_output[letter_number] == '\033':  # Checks for colors so they are not separated
             # Handle ANSI escape code
             start = letter_number
             letter_number += 1
@@ -314,6 +326,7 @@ def print_slower(text_output):
     print()
 
 
+# Main game loop
 def main_loop():
     while True:
         print_slower(player.current_room.get_description())
@@ -364,8 +377,8 @@ def main_loop():
             break
 
 
+# If this file is initialized as the main file.
 if __name__ == '__main__':
     class_room_list = setup_map()  # Set up rooms and items
     player = Player(class_room_list[start_room])  # Create the player
     main_loop()
-    # Main Game loop
